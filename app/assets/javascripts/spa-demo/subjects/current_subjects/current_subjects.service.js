@@ -19,18 +19,22 @@
     service.images = [];
     service.imageIdx = null;
     service.things = [];
+    service.imagesType = [];
     service.thingIdx = null;
+    service.thingId = null;
     service.refresh = refresh;
     service.isCurrentImageIndex = isCurrentImageIndex;
     service.isCurrentThingIndex = isCurrentThingIndex;
     service.nextThing = nextThing;
     service.previousThing = previousThing;
+    service.indexThingType = isCurrentThingTypeIndex;
 
     //refresh();
     $rootScope.$watch(function(){ return currentOrigin.getVersion(); }, refresh);
+
     return;
     ////////////////
-    function refresh() {      
+    function refresh() {
       var params=currentOrigin.getPosition();
       if (!params || !params.lng || !params.lat) {
         params=angular.copy(APP_CONFIG.default_position);
@@ -42,15 +46,18 @@
         params["miles"]=currentOrigin.getDistance();
       }
       params["order"]="ASC";
-      console.log("refresh",params);
+
+      params["subjtype"] = $rootScope.SelectType;
 
       var p1=refreshImages(params);
-      params["subject"]="thing";      
+      params["subject"]="thing";
       var p2=refreshThings(params);
+  //    var p3=refreshThingType(params);
+      $rootScope.params = params;
       $q.all([p1,p2]).then(
         function(){
           service.setCurrentImageForCurrentThing();
-        });      
+        });
     }
 
     function refreshImages(params) {
@@ -62,7 +69,7 @@
           if (!service.imageIdx || service.imageIdx > images.length) {
             service.imageIdx=0;
           }
-          console.log("refreshImages", service);
+//          console.log("refreshImages", service);
         });
       return result.$promise;
     }
@@ -75,8 +82,27 @@
           if (!service.thingIdx || service.thingIdx > things.length) {
             service.thingIdx=0;
           }
-          console.log("refreshThings", service);
+  //        console.log("refreshThings", service);
         });
+      return result.$promise;
+    }
+
+    function refreshThingType(params) {
+      var result=subjectsResource.query(params);
+      result.$promise.then(
+        function(things){
+          angular.forEach(things, function(tt){
+            if(tt.thing_subjtype === $rootScope.SelectType){
+              service.things= tt;
+              service.version += 1;
+              if (!service.thingIdx || service.thingIdx > things.length) {
+                service.thingIdx=0;
+              }
+  //            console.log("refreshThingType", service);
+            }
+          });
+        });
+  //    console.log("PROMISE PRE!!!!!!: ", result.$promise);
       return result.$promise;
     }
 
@@ -88,12 +114,16 @@
       //console.log("isCurrentThingIndex", index, service.thingIdx === index);
       return service.thingIdx === index;
     }
+    function isCurrentThingTypeIndex(index) {
+      //console.log("isCurrentThingIndex", index, service.thingIdx === index);
+      return service.thingIdx === index;
+    }
     function nextThing() {
       if (service.thingIdx !== null) {
         service.setCurrentThing(service.thingIdx + 1);
       } else if (service.things.length >= 1) {
         service.setCurrentThing(0);
-      }    
+      }
     }
     function previousThing() {
       if (service.thingIdx !== null) {
@@ -101,7 +131,8 @@
       } else if (service.things.length >= 1) {
         service.setCurrentThing(service.things.length-1);
       }
-    }    
+    }
+
   }
 
   CurrentSubjects.prototype.getVersion = function() {
@@ -140,13 +171,39 @@
     } else {
       this.imageIdx = null;
     }
-
     if (!skipThing) {
       this.setCurrentThingForCurrentImage();
     }
-
-    console.log("setCurrentImage", this.imageIdx, this.getCurrentImage());
     return this.getCurrentImage();
+  }
+
+  CurrentSubjects.prototype.setImagesType = function(IdThing, index) {
+
+    if(!Array.isArray(this.things)){
+      var aThings = [];
+      aThings.push(this.things);
+      this.things = aThings;
+    }
+
+    this.setCurrentSubjectId(IdThing.thing_id, IdThing.image_id);
+    for (var i=0; i<this.things.length; i++) {
+      var thing=this.things[i];
+      if (thing.thing_id === IdThing.thing_id) {
+        this.setCurrentThing(i, true);
+        this.setCurrentImageForCurrentThing();
+        break;
+      }
+    }
+
+    for (var i=0; i<this.images.length; i++) {
+      var image=this.images[i];
+      if (image.thing_id === IdThing.thing_id && image.priority===0) {
+        this.setCurrentImage(i, true);
+    //    this.setCurrentThingForCurrentImage();
+        break;
+      }
+    }
+
   }
 
   CurrentSubjects.prototype.setCurrentThing = function(index, skipImage) {
@@ -157,12 +214,9 @@
     } else {
       this.thingIdx=null;
     }
-
     if (!skipImage) {
       this.setCurrentImageForCurrentThing();
     }
-
-    console.log("setCurrentThing", this.thingIdx, this.getCurrentThing());
     return this.getCurrentThing();
   }
 
@@ -181,7 +235,7 @@
             break;
           }
         }
-      }      
+      }
     }
   }
 
@@ -213,7 +267,7 @@
       }
     }
     if (!found) {
-      this.setCurrentImage(null, true);      
+      this.setCurrentImage(null, true);
     }
   }
   CurrentSubjects.prototype.setCurrentThingId = function(thing_id, skipImage) {
@@ -228,27 +282,13 @@
       }
     }
     if (!found) {
-      this.setCurrentThing(null, true);      
-    }    
+      this.setCurrentThing(null, true);
+    }
   }
   CurrentSubjects.prototype.setCurrentSubjectId = function(thing_id, image_id) {
-    console.log("setCurrentSubject", thing_id, image_id);
+  //  console.log("setCurrentSubject", thing_id, image_id);
     this.setCurrentThingId(thing_id, true);
     this.setCurrentImageId(image_id, true);
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  })();
+})();

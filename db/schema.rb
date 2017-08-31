@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20170304202140) do
+ActiveRecord::Schema.define(version: 20170831152457) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -33,6 +33,16 @@ ActiveRecord::Schema.define(version: 20170304202140) do
 
   add_index "images", ["creator_id"], name: "index_images_on_creator_id", using: :btree
   add_index "images", ["lng", "lat"], name: "index_images_on_lng_and_lat", using: :btree
+
+  create_table "inquiries", force: :cascade do |t|
+    t.integer  "creator_id"
+    t.integer  "thing_id"
+    t.text     "question"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  add_index "inquiries", ["thing_id"], name: "index_inquiries_on_thing_id", using: :btree
 
   create_table "roles", force: :cascade do |t|
     t.integer  "user_id",    null: false
@@ -67,6 +77,7 @@ ActiveRecord::Schema.define(version: 20170304202140) do
     t.text     "notes"
     t.datetime "created_at",  null: false
     t.datetime "updated_at",  null: false
+    t.string   "subjtype"
   end
 
   add_index "things", ["name"], name: "index_things_on_name", using: :btree
@@ -100,6 +111,7 @@ ActiveRecord::Schema.define(version: 20170304202140) do
   add_index "users", ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true, using: :btree
   add_index "users", ["uid", "provider"], name: "index_users_on_uid_and_provider", unique: true, using: :btree
 
+  add_foreign_key "inquiries", "things"
   add_foreign_key "roles", "users"
   add_foreign_key "thing_images", "images"
   add_foreign_key "thing_images", "things"
